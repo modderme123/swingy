@@ -19,7 +19,7 @@ const mouse = {
 };
 const anchor = {
     x: playx / 2,
-    y: playy / 2 - 215
+    y: playy / 2 - 250
 };
 let bullets = [];
 
