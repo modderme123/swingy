@@ -28,16 +28,16 @@ function game() {
     let x = anchor.x - you.x - you.vx,
         y = anchor.y - you.y - you.vy,
         l = Math.sqrt(x * x + y * y);
-    l = ((l - 200) / l) * 0.01;
+    l = ((l - 200) / l) * 0.004;
     x *= l;
     y *= l;
     you.vx += x;
     you.vy += y;
 
-    you.vy += 0.15;
+    you.vy += 0.2;
 
-    you.x += you.vx *= 0.98;
-    you.y += you.vy *= 0.98;
+    you.x += you.vx *= 0.99;
+    you.y += you.vy *= 0.99;
 
     if (you.x > playx) {
         you.x = playx;
@@ -170,8 +170,8 @@ function shoot() {
     }
 }
 window.addEventListener("mousedown", e => {
-    if (e.button == 2 && lastShield + 1000 < Date.now()) you.shielding = true;
-    else shoot();
+    if (e.button == 0) shoot();
+    else if (lastShield + 400 < Date.now()) you.shielding = true;
 });
 window.addEventListener("mousemove", e => {
     mouse.x = e.clientX;
