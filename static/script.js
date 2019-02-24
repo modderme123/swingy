@@ -3,7 +3,7 @@ const ctx = canvas.getContext("2d");
 let width = (canvas.width = window.innerWidth);
 let height = (canvas.height = window.innerHeight);
 
-const playx = 2000;
+const playx = 4000;
 const playy = 500;
 
 let you = "";
@@ -55,6 +55,7 @@ function game() {
     const x = players[you] ? -players[you].pos[0] % 50 : 0;
     const y = players[you] ? -players[you].pos[1] % 50 : 0;
     ctx.lineWidth = 1;
+    ctx.strokeStyle = "#aaa";
     for (var i = x; i < window.innerWidth; i += 50) {
         ctx.beginPath();
         ctx.moveTo(i, 0);
@@ -70,7 +71,6 @@ function game() {
     ctx.translate(-subx, -suby);
 
     ctx.lineWidth = 5;
-    ctx.strokeStyle = "#aaa";
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(playx, 0);
@@ -108,6 +108,9 @@ function game() {
         ctx.arc(p.pos[0], p.pos[1], 15, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
+
+        ctx.fillStyle = `hsl(${Math.floor(p.health * 0.47)}, 100%, 50%)`;
+        ctx.fillRect(p.pos[0] - 25, p.pos[1] - 50, (p.health / 255) * 50, 10);
     }
     for (let bg in bullets) {
         for (var b of bullets[bg]) {

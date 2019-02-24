@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use std::time::Instant;
 
-const PLAYX: f32 = 2000.0;
+const PLAYX: f32 = 4000.0;
 const PLAYY: f32 = 500.0;
 
 /// Message for game server communications
@@ -181,6 +181,18 @@ impl GameServer {
                     let oy = p.angle.sin();
                     p.anchor.x = p.pos.x + ox * 200.0;
                     p.anchor.y = p.pos.y + oy * 200.0;
+                }
+                if p.pos.x < act.demon.pos.x + 25.0
+                    && p.pos.x > act.demon.pos.x - 25.0
+                    && p.pos.y < act.demon.pos.y + 50.0
+                    && p.pos.y > act.demon.pos.y - 50.0
+                {
+                    if p.shielding {
+                        p.health = p.health.saturating_sub(20)
+                    } else {
+                        p.health = 0;
+                    }
+                    act.demon.health = act.demon.health.saturating_sub(10);
                 }
                 if p.shooting && p.last_shot.elapsed().as_millis() > 500 {
                     let recoil = Vector2::new(p.angle.cos(), p.angle.sin()) * 8.0;
