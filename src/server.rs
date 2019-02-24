@@ -132,8 +132,8 @@ impl GameServer {
                     d.health = d.health.saturating_add(1);
                 }
                 if act.tick % 100 == 0 {
-                    for i in 0..10 {
-                        let angle = i as f32 / 10.0 * PI - PI / 2.0 * d.vel.x.signum();
+                    for i in 0..30 {
+                        let angle = i as f32 / 30.0 * PI - PI / 2.0 * d.vel.x.signum();
                         let vec = Vector2::new(angle.cos(), angle.sin());
                         let bullet = Bullet {
                             pos: d.pos,
@@ -262,7 +262,8 @@ impl GameServer {
                     } else {
                         for p in act.players.values_mut() {
                             if (p.pos - b.pos).norm() < 20.0 {
-                                p.health = p.health.saturating_sub(50);
+                                p.health =
+                                    p.health.saturating_sub(if p.shielding { 25 } else { 50 });
                                 b.time -= Duration::from_secs(2);
                             }
                         }
