@@ -127,10 +127,10 @@ fn main() {
                     .index_file("index.html"),
             )
     })
-    .bind(format!("0.0.0.0:{}",port))
+    .bind(format!("0.0.0.0:{}", port))
     .unwrap()
     .start();
 
-    println!("Started http server: http://localhost:{}",port);
+    println!("Started http server: http://localhost:{}", port);
     let _ = sys.run();
 }

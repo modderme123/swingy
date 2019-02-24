@@ -4,12 +4,13 @@ let width = (canvas.width = window.innerWidth);
 let height = (canvas.height = window.innerHeight);
 
 const playx = 2000;
-const playy = 1000;
+const playy = 500;
 
 let you = "";
 
 let bullets = [];
 let players = [];
+let demon = {};
 
 let ws = new WebSocket("ws://" + window.location.host + "/ws/");
 let opened = false;
@@ -33,9 +34,15 @@ ws.addEventListener("open", () => {
 ws.addEventListener("close", () => (opened = false));
 ws.addEventListener("message", e => {
     const m = JSON.parse(e.data);
+
     if (m.you) you = m.you;
     if (m.players) players = m.players;
     if (m.bullets) bullets = m.bullets;
+    if (m.demon) demon = m.demon;
+    if (m.death == you) {
+        document.getElementById("login").style.display = null;
+        document.getElementById("username").focus();
+    }
 });
 
 let tick = 0;
@@ -90,6 +97,11 @@ function game() {
             ctx.setLineDash([]);
         }
 
+        ctx.fillStyle = "#aaa";
+        ctx.textAlign = "center";
+        ctx.font = "30px monospace";
+        ctx.fillText(p.name, p.pos[0], p.pos[1] + 50);
+
         ctx.fillStyle = p.shielding ? "#aaa" : `hsl(${tick * 2}, 75%, 50%)`;
         ctx.strokeStyle = p.shielding ? `hsl(${tick * 2}, 75%, 50%)` : "#aaa";
         ctx.beginPath();
@@ -106,6 +118,10 @@ function game() {
         }
     }
 
+    if (demon.pos) {
+        ctx.fillStyle = "#aaa";
+        ctx.fillRect(demon.pos[0] - 25, demon.pos[1] - 50, 50, 100);
+    }
     ctx.strokeStyle = "#aaa";
     ctx.beginPath();
     ctx.arc(playx / 2, playy / 2, 20, 0, 2 * Math.PI);

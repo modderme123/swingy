@@ -12,7 +12,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 const PLAYX: f32 = 2000.0;
-const PLAYY: f32 = 1000.0;
+const PLAYY: f32 = 500.0;
 
 /// Message for game server communications
 #[derive(Message)]
@@ -53,11 +53,18 @@ pub struct Player {
     pub health: u8,
     pub shielding: bool,
     pub shooting: bool,
+    pub name: String,
     pub last_shield: Instant,
     pub last_shot: Instant,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Copy, Clone)]
+pub struct Demon {
+    pub pos: Vector2<f32>,
+    pub vel: Vector2<f32>,
+    pub health: u8,
+}
+
 struct Bullet {
     pos: Vector2<f32>,
     vel: Vector2<f32>,
@@ -70,6 +77,7 @@ pub struct GameServer {
     sessions: HashMap<usize, Recipient<Message>>,
     players: HashMap<usize, Player>,
     bullets: HashMap<usize, Vec<Bullet>>,
+    demon: Demon,
     rng: RefCell<ThreadRng>,
 }
 
@@ -77,6 +85,7 @@ pub struct GameServer {
 struct ClientPlayer {
     pos: Vector2<f32>,
     anchor: Vector2<f32>,
+    name: String,
     angle: f32,
     health: u8,
     shooting: bool,
@@ -93,13 +102,20 @@ struct ClientBullet {
 struct Playfield {
     players: HashMap<usize, ClientPlayer>,
     bullets: HashMap<usize, Vec<ClientBullet>>,
+    demon: Demon,
 }
 impl GameServer {
     pub fn new() -> GameServer {
+        let demon = Demon {
+            pos: Vector2::new(50.0, PLAYY / 2.0),
+            vel: na::zero(),
+            health: 255,
+        };
         GameServer {
             sessions: HashMap::new(),
             players: HashMap::new(),
             bullets: HashMap::new(),
+            demon,
             rng: RefCell::new(rand::thread_rng()),
         }
     }
@@ -204,6 +220,7 @@ impl GameServer {
                             ClientPlayer {
                                 pos: p.pos,
                                 anchor: p.anchor,
+                                name: p.name.to_string(),
                                 angle: p.angle,
                                 health: p.health,
                                 shielding: p.shielding,
@@ -227,6 +244,7 @@ impl GameServer {
                         )
                     })
                     .collect(),
+                demon: act.demon,
             };
             let serialized = ::serde_json::to_string(&playfield).unwrap();
             act.send_message(&serialized);
@@ -296,21 +314,6 @@ impl Handler<ServerMessage> for GameServer {
     type Result = ();
 
     fn handle(&mut self, msg: ServerMessage, _: &mut Context<Self>) {
-        if let ClientMessage::Name(_) = msg.m {
-            let p = Player {
-                vel: Vector2::new(0.0, 0.0),
-                pos: Vector2::new(PLAYX / 2.0, PLAYY / 2.0),
-                anchor: Vector2::new(PLAYX / 2.0, PLAYY / 2.0 - 250.0),
-                angle: 0.0,
-                health: 255,
-                shielding: false,
-                shooting: false,
-                last_shield: Instant::now(),
-                last_shot: Instant::now(),
-            };
-
-            self.players.insert(msg.id, p);
-        }
         if let Some(p) = self.players.get_mut(&msg.id) {
             match msg.m {
                 ClientMessage::Shoot(s) => p.shooting = s, //500
@@ -327,6 +330,23 @@ impl Handler<ServerMessage> for GameServer {
                 } //400
                 ClientMessage::Angle(a) => p.angle = a,
                 ClientMessage::Name(_) => (),
+            }
+        } else {
+            if let ClientMessage::Name(name) = msg.m {
+                let p = Player {
+                    vel: Vector2::new(0.0, 0.0),
+                    pos: Vector2::new(PLAYX / 2.0, PLAYY / 2.0),
+                    anchor: Vector2::new(PLAYX / 2.0, PLAYY / 2.0 - 250.0),
+                    name,
+                    angle: 0.0,
+                    health: 255,
+                    shielding: false,
+                    shooting: false,
+                    last_shield: Instant::now(),
+                    last_shot: Instant::now(),
+                };
+
+                self.players.insert(msg.id, p);
             }
         }
     }

@@ -1,5 +1,5 @@
 [package]
-name = "server"
+name = "swingy"
 version = "0.1.0"
 authors = ["modderme123 <modderme123@gmail.com>"]
 edition = "2018"
