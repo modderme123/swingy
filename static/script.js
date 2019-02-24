@@ -45,8 +45,24 @@ function game() {
 
     ctx.resetTransform();
     ctx.clearRect(0, 0, width, height);
+    const x = players[you] ? -players[you].pos[0] % 50 : 0;
+    const y = players[you] ? -players[you].pos[1] % 50 : 0;
+    ctx.lineWidth = 1;
+    for (var i = x; i < window.innerWidth; i += 50) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, window.innerHeight);
+        ctx.stroke();
+    }
+    for (var j = y; j < window.innerHeight; j += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(window.innerWidth, j);
+        ctx.stroke();
+    }
     ctx.translate(-subx, -suby);
 
+    ctx.lineWidth = 5;
     ctx.strokeStyle = "#aaa";
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -76,7 +92,6 @@ function game() {
 
         ctx.fillStyle = p.shielding ? "#aaa" : `hsl(${tick * 2}, 75%, 50%)`;
         ctx.strokeStyle = p.shielding ? `hsl(${tick * 2}, 75%, 50%)` : "#aaa";
-        ctx.lineWidth = 5;
         ctx.beginPath();
         ctx.arc(p.pos[0], p.pos[1], 15, 0, 2 * Math.PI);
         ctx.fill();
@@ -84,7 +99,7 @@ function game() {
     }
     for (let bg in bullets) {
         for (var b of bullets[bg]) {
-            ctx.fillStyle = bg==you?"blue":"red";
+            ctx.fillStyle = bg == you ? "blue" : "red";
             ctx.beginPath();
             ctx.arc(b.pos[0], b.pos[1], 5, 0, 2 * Math.PI);
             ctx.fill();
