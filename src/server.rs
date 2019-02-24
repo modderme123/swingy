@@ -108,7 +108,7 @@ impl GameServer {
     pub fn new() -> GameServer {
         let demon = Demon {
             pos: Vector2::new(50.0, PLAYY / 2.0),
-            vel: Vector2::new(1.0, 0.0),
+            vel: Vector2::new(4.0, 0.0),
             health: 255,
         };
         GameServer {
