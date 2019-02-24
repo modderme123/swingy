@@ -110,11 +110,11 @@ function game() {
         ctx.stroke();
 
         ctx.fillStyle = `hsl(${Math.floor(p.health * 0.47)}, 100%, 50%)`;
-        ctx.fillRect(p.pos[0] - 25, p.pos[1] - 50, (p.health / 255) * 50, 10);
+        ctx.fillRect(p.pos[0] - (p.health / 255) * 25, p.pos[1] - 50, (p.health / 255) * 50, 10);
     }
     for (let bg in bullets) {
         for (var b of bullets[bg]) {
-            ctx.fillStyle = bg == you ? "blue" : "red";
+            ctx.fillStyle = bg != 0 ? "blue" : "red";
             ctx.beginPath();
             ctx.arc(b.pos[0], b.pos[1], 5, 0, 2 * Math.PI);
             ctx.fill();
@@ -125,7 +125,7 @@ function game() {
         ctx.fillStyle = "#aaa";
         ctx.fillRect(demon.pos[0] - 25, demon.pos[1] - 50, 50, 100);
         ctx.fillStyle = `hsl(${Math.floor(demon.health * 0.47)}, 100%, 50%)`;
-        ctx.fillRect(demon.pos[0] - 25, demon.pos[1] - 70, (demon.health / 255) * 50, 10);
+        ctx.fillRect(demon.pos[0] - (demon.health / 255) * 25, demon.pos[1] - 70, (demon.health / 255) * 50, 10);
     }
 
     tick++;

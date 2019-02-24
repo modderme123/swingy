@@ -1,5 +1,3 @@
-//! `GameServer` is an actor. It maintains list of connection client session.
-//!  Peers send messages to other peers through `GameServer`.
 use actix::prelude::*;
 use na::Vector2;
 use nalgebra as na;
@@ -8,24 +6,22 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::f32::consts::PI;
 use std::time::Duration;
 use std::time::Instant;
 
 const PLAYX: f32 = 4000.0;
 const PLAYY: f32 = 500.0;
 
-/// Message for game server communications
 #[derive(Message)]
 pub struct Message(pub String);
 
-/// New game session is created
 #[derive(Message)]
 #[rtype(usize)]
 pub struct Connect {
     pub addr: Recipient<Message>,
 }
 
-/// Session is disconnected
 #[derive(Message, Serialize)]
 pub struct Disconnect {
     pub id: usize,
@@ -71,13 +67,12 @@ struct Bullet {
     time: Instant,
 }
 
-/// `GameServer` responsible for coordinating game sessions.
-/// implementation is super primitive
 pub struct GameServer {
     sessions: HashMap<usize, Recipient<Message>>,
     players: HashMap<usize, Player>,
     bullets: HashMap<usize, Vec<Bullet>>,
     demon: Demon,
+    tick: usize,
     rng: RefCell<ThreadRng>,
 }
 
@@ -108,7 +103,7 @@ impl GameServer {
     pub fn new() -> GameServer {
         let demon = Demon {
             pos: Vector2::new(50.0, PLAYY / 2.0),
-            vel: Vector2::new(4.0, 0.0),
+            vel: Vector2::new(8.0, 0.0),
             health: 255,
         };
         GameServer {
@@ -116,10 +111,10 @@ impl GameServer {
             players: HashMap::new(),
             bullets: HashMap::new(),
             demon,
+            tick: 0,
             rng: RefCell::new(rand::thread_rng()),
         }
     }
-    /// Send message to all players
     fn send_message(&self, message: &str) {
         for addr in self.sessions.values() {
             let _ = addr.do_send(Message(message.to_owned()));
@@ -133,7 +128,25 @@ impl GameServer {
                     d.pos.x = 0.0;
                     d.health = 255;
                 }
-                d.health = d.health.saturating_add(1);
+                if act.tick % 3 == 0 {
+                    d.health = d.health.saturating_add(1);
+                }
+                if act.tick % 100 == 0 {
+                    for i in 0..10 {
+                        let angle = i as f32 / 10.0 * PI - PI / 2.0 * d.vel.x.signum();
+                        let vec = Vector2::new(angle.cos(), angle.sin());
+                        let bullet = Bullet {
+                            pos: d.pos,
+                            vel: vec * 16.0,
+                            time: Instant::now(),
+                        };
+                        if let Some(x) = act.bullets.get_mut(&0) {
+                            x.push(bullet);
+                        } else {
+                            act.bullets.insert(0, vec![bullet]);
+                        }
+                    }
+                }
                 if d.pos.x > PLAYX {
                     d.pos.x = PLAYX;
                     d.vel.x *= -1.0;
@@ -176,6 +189,10 @@ impl GameServer {
                     p.vel.y *= -1.0;
                 }
 
+                if act.tick % 3 == 0 {
+                    p.health = p.health.saturating_add(1);
+                }
+
                 if p.shielding {
                     let ox = p.angle.cos();
                     let oy = p.angle.sin();
@@ -188,18 +205,18 @@ impl GameServer {
                     && p.pos.y > act.demon.pos.y - 50.0
                 {
                     if p.shielding {
-                        p.health = p.health.saturating_sub(20);
-                        act.demon.health = act.demon.health.saturating_sub(40);
+                        p.health = p.health.saturating_sub(10);
+                        act.demon.health = act.demon.health.saturating_sub(20);
                     } else {
                         p.health = 0;
-                        act.demon.health = act.demon.health.saturating_sub(10);
+                        act.demon.health = act.demon.health.saturating_sub(5);
                     }
                 }
                 if p.shooting && p.last_shot.elapsed().as_millis() > 500 {
                     let recoil = Vector2::new(p.angle.cos(), p.angle.sin()) * 8.0;
                     let bullet = Bullet {
                         pos: p.pos,
-                        vel: recoil,
+                        vel: recoil * 2.0,
                         time: Instant::now(),
                     };
                     if let Some(x) = act.bullets.get_mut(id) {
@@ -212,7 +229,7 @@ impl GameServer {
                 }
             }
 
-            for bg in act.bullets.values_mut() {
+            for (id, bg) in act.bullets.iter_mut() {
                 for b in bg.iter_mut() {
                     b.vel.y += 0.05;
                     b.vel *= 0.999;
@@ -233,20 +250,31 @@ impl GameServer {
                         b.pos.y = 0.0;
                         b.vel.y *= -1.0;
                     }
-                    if b.pos.x < act.demon.pos.x + 25.0
-                        && b.pos.x > act.demon.pos.x - 25.0
-                        && b.pos.y < act.demon.pos.y + 50.0
-                        && b.pos.y > act.demon.pos.y - 50.0
-                    {
-                        b.time -= Duration::from_secs(3);
-                        act.demon.health = act.demon.health.saturating_sub(100);
+                    if *id != 0 {
+                        if b.pos.x < act.demon.pos.x + 25.0
+                            && b.pos.x > act.demon.pos.x - 25.0
+                            && b.pos.y < act.demon.pos.y + 50.0
+                            && b.pos.y > act.demon.pos.y - 50.0
+                        {
+                            b.time -= Duration::from_secs(2);
+                            act.demon.health = act.demon.health.saturating_sub(50);
+                        }
+                    } else {
+                        for p in act.players.values_mut() {
+                            if (p.pos - b.pos).norm() < 20.0 {
+                                p.health = p.health.saturating_sub(50);
+                                b.time -= Duration::from_secs(2);
+                            }
+                        }
                     }
                 }
 
-                bg.retain(|b| b.time.elapsed().as_millis() < 3000)
+                bg.retain(|b| b.time.elapsed().as_millis() < 2000)
             }
 
             act.reap_players();
+
+            act.tick += 1;
 
             let playfield = Playfield {
                 players: act
@@ -311,10 +339,7 @@ impl GameServer {
     }
 }
 
-/// Make actor from `GameServer`
 impl Actor for GameServer {
-    /// We are going to use simple Context, we just need ability to communicate
-    /// with other actors.
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
@@ -354,18 +379,18 @@ impl Handler<ServerMessage> for GameServer {
     fn handle(&mut self, msg: ServerMessage, _: &mut Context<Self>) {
         if let Some(p) = self.players.get_mut(&msg.id) {
             match msg.m {
-                ClientMessage::Shoot(s) => p.shooting = s, //500
+                ClientMessage::Shoot(s) => p.shooting = s,
                 ClientMessage::Shield(s) if !s && p.shielding => {
                     p.anchor.x = p.pos.x + p.angle.cos() * 400.0;
                     p.anchor.y = p.pos.y + p.angle.sin() * 400.0;
                     p.last_shield = Instant::now();
                     p.shielding = false;
-                } //400
+                }
                 ClientMessage::Shield(s) => {
-                    if p.last_shield.elapsed().as_millis() > 400 {
+                    if p.last_shield.elapsed().as_millis() > 300 {
                         p.shielding = s
                     }
-                } //400
+                }
                 ClientMessage::Angle(a) => p.angle = a,
                 ClientMessage::Name(_) => (),
             }
