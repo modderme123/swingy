@@ -188,11 +188,12 @@ impl GameServer {
                     && p.pos.y > act.demon.pos.y - 50.0
                 {
                     if p.shielding {
-                        p.health = p.health.saturating_sub(20)
+                        p.health = p.health.saturating_sub(20);
+                        act.demon.health = act.demon.health.saturating_sub(40);
                     } else {
                         p.health = 0;
+                        act.demon.health = act.demon.health.saturating_sub(10);
                     }
-                    act.demon.health = act.demon.health.saturating_sub(10);
                 }
                 if p.shooting && p.last_shot.elapsed().as_millis() > 500 {
                     let recoil = Vector2::new(p.angle.cos(), p.angle.sin()) * 8.0;
