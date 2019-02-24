@@ -121,11 +121,10 @@ function game() {
     if (demon.pos) {
         ctx.fillStyle = "#aaa";
         ctx.fillRect(demon.pos[0] - 25, demon.pos[1] - 50, 50, 100);
+        ctx.fillStyle = `hsl(${Math.floor(demon.health * 0.47)}, 100%, 50%)`;
+        ctx.fillRect(demon.pos[0] - 25, demon.pos[1] - 70, (demon.health / 255) * 50, 10);
     }
-    ctx.strokeStyle = "#aaa";
-    ctx.beginPath();
-    ctx.arc(playx / 2, playy / 2, 20, 0, 2 * Math.PI);
-    ctx.stroke();
+
     tick++;
     window.requestAnimationFrame(game);
 }

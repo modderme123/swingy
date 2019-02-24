@@ -108,7 +108,7 @@ impl GameServer {
     pub fn new() -> GameServer {
         let demon = Demon {
             pos: Vector2::new(50.0, PLAYY / 2.0),
-            vel: na::zero(),
+            vel: Vector2::new(1.0, 0.0),
             health: 255,
         };
         GameServer {
@@ -127,6 +127,23 @@ impl GameServer {
     }
     fn tick(&self, ctx: &mut Context<Self>) {
         ctx.run_later(Duration::from_millis(16), |act, ctx| {
+            {
+                let d = &mut act.demon;
+                if d.health == 0 {
+                    d.pos.x = 0.0;
+                    d.health = 255;
+                }
+                d.health = d.health.saturating_add(1);
+                if d.pos.x > PLAYX {
+                    d.pos.x = PLAYX;
+                    d.vel.x *= -1.0;
+                }
+                if d.pos.x < 0.0 {
+                    d.pos.x = 0.0;
+                    d.vel.x *= -1.0;
+                }
+                d.pos += d.vel;
+            }
             for (id, p) in act.players.iter_mut() {
                 let mut x = p.anchor.x - p.pos.x - p.vel.x;
                 let mut y = p.anchor.y - p.pos.y - p.vel.y;
@@ -202,6 +219,14 @@ impl GameServer {
                     if b.pos.y < 0.0 {
                         b.pos.y = 0.0;
                         b.vel.y *= -1.0;
+                    }
+                    if b.pos.x < act.demon.pos.x + 25.0
+                        && b.pos.x > act.demon.pos.x - 25.0
+                        && b.pos.y < act.demon.pos.y + 50.0
+                        && b.pos.y > act.demon.pos.y - 50.0
+                    {
+                        b.time -= Duration::from_secs(3);
+                        act.demon.health = act.demon.health.saturating_sub(100);
                     }
                 }
 
