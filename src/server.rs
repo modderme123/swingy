@@ -33,6 +33,7 @@ pub enum ClientMessage {
     Angle(f32),
     Shoot(bool),
     Shield(bool),
+    Detach,
 }
 
 #[derive(Message)]
@@ -49,6 +50,7 @@ pub struct Player {
     pub health: u8,
     pub shielding: bool,
     pub shooting: bool,
+    pub detaching: bool,
     pub score: u32,
     pub name: String,
     pub last_shield: Instant,
@@ -87,6 +89,7 @@ struct ClientPlayer {
     score: u32,
     shooting: bool,
     shielding: bool,
+    detaching: bool,
 }
 
 #[derive(Serialize)]
@@ -105,7 +108,7 @@ impl GameServer {
     pub fn new() -> GameServer {
         let demon = Demon {
             pos: Vector2::new(50.0, PLAYY / 2.0),
-            vel: Vector2::new(8.0, 0.0),
+            vel: Vector2::new(4.0, 0.0),
             health: 255,
         };
         GameServer {
@@ -139,7 +142,7 @@ impl GameServer {
                         let vec = Vector2::new(angle.cos(), angle.sin());
                         let bullet = Bullet {
                             pos: d.pos,
-                            vel: vec * 16.0,
+                            vel: vec * 10.0,
                             time: Instant::now(),
                         };
                         if let Some(x) = act.bullets.get_mut(&0) {
@@ -160,17 +163,18 @@ impl GameServer {
                 d.pos += d.vel;
             }
             for (id, p) in act.players.iter_mut() {
-                let mut x = p.anchor.x - p.pos.x - p.vel.x;
-                let mut y = p.anchor.y - p.pos.y - p.vel.y;
-                let mut l = (x * x + y * y).sqrt();
-                l = ((l - 200.0) / l) * 0.004;
-                x *= l;
-                y *= l;
-                p.vel.x += x;
-                p.vel.y += y;
-
                 p.vel.y += 0.2;
 
+                if !p.detaching {
+                    let mut x = p.anchor.x - p.pos.x - p.vel.x;
+                    let mut y = p.anchor.y - p.pos.y - p.vel.y;
+                    let mut l = (x * x + y * y).sqrt();
+                    l = ((l - 200.0) / l) * 0.9;
+                    x *= l;
+                    y *= l;
+                    p.vel.x += x;
+                    p.vel.y += y;
+                }
                 p.vel *= 0.99;
                 p.pos += p.vel;
 
@@ -195,24 +199,22 @@ impl GameServer {
                     p.health = p.health.saturating_add(1);
                 }
 
-                if p.shielding {
+                if p.shielding && p.last_shield.elapsed().as_millis() > 800 {
                     let ox = p.angle.cos();
                     let oy = p.angle.sin();
                     p.anchor.x = p.pos.x + ox * 200.0;
                     p.anchor.y = p.pos.y + oy * 200.0;
+                    p.detaching = false;
+                    p.last_shield = Instant::now();
                 }
+
                 if p.pos.x < act.demon.pos.x + 25.0
                     && p.pos.x > act.demon.pos.x - 25.0
                     && p.pos.y < act.demon.pos.y + 50.0
                     && p.pos.y > act.demon.pos.y - 50.0
                 {
-                    if p.shielding {
-                        p.health = p.health.saturating_sub(10);
-                        act.demon.health = act.demon.health.saturating_sub(20);
-                    } else {
-                        p.health = p.health.saturating_sub(20);
-                        act.demon.health = act.demon.health.saturating_sub(5);
-                    }
+                    p.health = p.health.saturating_sub(20);
+                    act.demon.health = act.demon.health.saturating_sub(5);
                 }
                 if p.shooting && p.last_shot.elapsed().as_millis() > 500 {
                     let recoil = Vector2::new(p.angle.cos(), p.angle.sin()) * 8.0;
@@ -301,6 +303,7 @@ impl GameServer {
                                 score: p.score,
                                 shielding: p.shielding,
                                 shooting: p.shooting,
+                                detaching: p.detaching,
                             },
                         )
                     })
@@ -390,16 +393,9 @@ impl Handler<ServerMessage> for GameServer {
         if let Some(p) = self.players.get_mut(&msg.id) {
             match msg.m {
                 ClientMessage::Shoot(s) => p.shooting = s,
-                ClientMessage::Shield(s) if !s && p.shielding => {
-                    p.anchor.x = p.pos.x + p.angle.cos() * 400.0;
-                    p.anchor.y = p.pos.y + p.angle.sin() * 400.0;
-                    p.last_shield = Instant::now();
-                    p.shielding = false;
-                }
-                ClientMessage::Shield(s) => {
-                    if p.last_shield.elapsed().as_millis() > 100 {
-                        p.shielding = s
-                    }
+                ClientMessage::Shield(s) => p.shielding = s,
+                ClientMessage::Detach => {
+                    p.detaching = true
                 }
                 ClientMessage::Angle(a) => p.angle = a,
                 ClientMessage::Name(_) => (),
@@ -416,6 +412,7 @@ impl Handler<ServerMessage> for GameServer {
                     health: 255,
                     shielding: false,
                     shooting: false,
+                    detaching: false,
                     last_shield: Instant::now(),
                     last_shot: Instant::now(),
                 };

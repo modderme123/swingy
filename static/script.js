@@ -80,30 +80,27 @@ function game() {
     ctx.stroke();
 
     for (let p of Object.values(players)) {
+        if (!p.detaching){
         ctx.strokeStyle = "#aaa";
         ctx.beginPath();
         ctx.moveTo(p.pos[0], p.pos[1]);
         ctx.lineTo(p.anchor[0], p.anchor[1]);
         ctx.stroke();
-
-        if (p.shielding) {
-            let ox = Math.cos(p.angle),
-                oy = Math.sin(p.angle);
-            ctx.setLineDash([10, 20]);
-            ctx.beginPath();
-            ctx.moveTo(p.pos[0], p.pos[1]);
-            ctx.lineTo(p.pos[0] + ox * 400, p.pos[1] + oy * 400);
-            ctx.stroke();
-            ctx.setLineDash([]);
         }
+        let ox = Math.cos(p.angle),
+            oy = Math.sin(p.angle);
+        ctx.beginPath();
+        ctx.moveTo(p.pos[0], p.pos[1]);
+        ctx.lineTo(p.pos[0] + ox * 30, p.pos[1] + oy * 30);
+        ctx.stroke();
 
         ctx.fillStyle = "#aaa";
         ctx.textAlign = "center";
         ctx.font = "30px monospace";
         ctx.fillText(p.name, p.pos[0], p.pos[1] + 50);
 
-        ctx.fillStyle = p.shielding ? "#aaa" : `hsl(${tick * 2}, 75%, 50%)`;
-        ctx.strokeStyle = p.shielding ? `hsl(${tick * 2}, 75%, 50%)` : "#aaa";
+        ctx.fillStyle = p.detaching ? "#aaa" : `hsl(${tick * 2}, 75%, 50%)`;
+        ctx.strokeStyle = p.detaching ? `hsl(${tick * 2}, 75%, 50%)` : "#aaa";
         ctx.beginPath();
         ctx.arc(p.pos[0], p.pos[1], 15, 0, 2 * Math.PI);
         ctx.fill();
@@ -146,9 +143,12 @@ window.addEventListener("mouseup", e => {
 });
 window.addEventListener("keydown", e => {
     if (e.keyCode == 32) send({ Shoot: true });
+    if (e.keyCode == 69) send({ Shield: true });
+    if (e.keyCode == 68) send({ Detach: null });
 });
 window.addEventListener("keyup", e => {
     if (e.keyCode == 32) send({ Shoot: false });
+    if (e.keyCode == 69) send({ Shield: false });
 });
 window.addEventListener("contextmenu", e => {
     e.preventDefault();
