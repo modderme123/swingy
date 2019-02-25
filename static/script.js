@@ -97,7 +97,7 @@ function game() {
         ctx.fillStyle = "#aaa";
         ctx.textAlign = "center";
         ctx.font = "30px monospace";
-        ctx.fillText(p.name, p.pos[0], p.pos[1] + 50);
+        ctx.fillText(p.name+": "+p.score, p.pos[0], p.pos[1] + 50);
 
         ctx.fillStyle = p.detaching ? "#aaa" : `hsl(${tick * 2}, 75%, 50%)`;
         ctx.strokeStyle = p.detaching ? `hsl(${tick * 2}, 75%, 50%)` : "#aaa";
@@ -132,23 +132,23 @@ game();
 
 window.addEventListener("mousedown", e => {
     if (e.button == 0) send({ Shoot: true });
-    else send({ Shield: true });
+    else send({ Anchor: true });
 });
 window.addEventListener("mousemove", e => {
     send({ Angle: Math.atan2(e.clientY - height / 2, e.clientX - width / 2) });
 });
 window.addEventListener("mouseup", e => {
     if (e.button == 0) send({ Shoot: false });
-    if (e.button == 2) send({ Shield: false });
+    if (e.button == 2) send({ Anchor: false });
 });
 window.addEventListener("keydown", e => {
     if (e.keyCode == 32) send({ Shoot: true });
-    if (e.keyCode == 69) send({ Shield: true });
+    if (e.keyCode == 69) send({ Anchor: true });
     if (e.keyCode == 68) send({ Detach: null });
 });
 window.addEventListener("keyup", e => {
     if (e.keyCode == 32) send({ Shoot: false });
-    if (e.keyCode == 69) send({ Shield: false });
+    if (e.keyCode == 69) send({ Anchor: false });
 });
 window.addEventListener("contextmenu", e => {
     e.preventDefault();

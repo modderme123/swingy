@@ -32,7 +32,7 @@ pub enum ClientMessage {
     Name(String),
     Angle(f32),
     Shoot(bool),
-    Shield(bool),
+    Anchor(bool),
     Detach,
 }
 
@@ -48,7 +48,7 @@ pub struct Player {
     pub anchor: Vector2<f32>,
     pub angle: f32,
     pub health: u8,
-    pub shielding: bool,
+    pub anchoring: bool,
     pub shooting: bool,
     pub detaching: bool,
     pub score: u32,
@@ -88,7 +88,7 @@ struct ClientPlayer {
     health: u8,
     score: u32,
     shooting: bool,
-    shielding: bool,
+    anchoring: bool,
     detaching: bool,
 }
 
@@ -199,7 +199,7 @@ impl GameServer {
                     p.health = p.health.saturating_add(1);
                 }
 
-                if p.shielding && p.last_shield.elapsed().as_millis() > 800 {
+                if p.anchoring && p.last_shield.elapsed().as_millis() > 800 {
                     let ox = p.angle.cos();
                     let oy = p.angle.sin();
                     p.anchor.x = p.pos.x + ox * 200.0;
@@ -216,7 +216,10 @@ impl GameServer {
                     p.health = p.health.saturating_sub(20);
                     act.demon.health = act.demon.health.saturating_sub(5);
                 }
-                if p.shooting && p.last_shot.elapsed().as_millis() > 500 {
+                if p.detaching && p.shooting {
+                    let recoil = Vector2::new(p.angle.cos(), p.angle.sin()) * 0.4;
+                    p.vel += recoil;
+                } else if p.shooting && p.last_shot.elapsed().as_millis() > 500 {
                     let recoil = Vector2::new(p.angle.cos(), p.angle.sin()) * 8.0;
                     let bullet = Bullet {
                         pos: p.pos,
@@ -264,6 +267,7 @@ impl GameServer {
                             if let Some(n) = act.demon.health.checked_sub(50) {
                                 act.demon.health = n;
                             } else {
+                                act.demon.health = 0;
                                 if let Some(p) = act.players.get_mut(id) {
                                     p.score += 1;
                                 }
@@ -273,7 +277,7 @@ impl GameServer {
                         for p in act.players.values_mut() {
                             if (p.pos - b.pos).norm() < 20.0 {
                                 p.health =
-                                    p.health.saturating_sub(if p.shielding { 25 } else { 50 });
+                                    p.health.saturating_sub(30);
                                 b.time -= Duration::from_secs(2);
                             }
                         }
@@ -301,7 +305,7 @@ impl GameServer {
                                 angle: p.angle,
                                 health: p.health,
                                 score: p.score,
-                                shielding: p.shielding,
+                                anchoring: p.anchoring,
                                 shooting: p.shooting,
                                 detaching: p.detaching,
                             },
@@ -393,7 +397,7 @@ impl Handler<ServerMessage> for GameServer {
         if let Some(p) = self.players.get_mut(&msg.id) {
             match msg.m {
                 ClientMessage::Shoot(s) => p.shooting = s,
-                ClientMessage::Shield(s) => p.shielding = s,
+                ClientMessage::Anchor(s) => p.anchoring = s,
                 ClientMessage::Detach => {
                     p.detaching = true
                 }
@@ -410,7 +414,7 @@ impl Handler<ServerMessage> for GameServer {
                     score: 0,
                     angle: 0.0,
                     health: 255,
-                    shielding: false,
+                    anchoring: false,
                     shooting: false,
                     detaching: false,
                     last_shield: Instant::now(),
