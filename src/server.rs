@@ -11,7 +11,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 const PLAYX: f32 = 4000.0;
-const PLAYY: f32 = 500.0;
+const PLAYY: f32 = 750.0;
 
 #[derive(Message)]
 pub struct Message(pub String);
@@ -49,6 +49,7 @@ pub struct Player {
     pub health: u8,
     pub shielding: bool,
     pub shooting: bool,
+    pub score: u32,
     pub name: String,
     pub last_shield: Instant,
     pub last_shot: Instant,
@@ -83,6 +84,7 @@ struct ClientPlayer {
     name: String,
     angle: f32,
     health: u8,
+    score: u32,
     shooting: bool,
     shielding: bool,
 }
@@ -208,7 +210,7 @@ impl GameServer {
                         p.health = p.health.saturating_sub(10);
                         act.demon.health = act.demon.health.saturating_sub(20);
                     } else {
-                        p.health = 0;
+                        p.health = p.health.saturating_sub(20);
                         act.demon.health = act.demon.health.saturating_sub(5);
                     }
                 }
@@ -257,7 +259,13 @@ impl GameServer {
                             && b.pos.y > act.demon.pos.y - 50.0
                         {
                             b.time -= Duration::from_secs(2);
-                            act.demon.health = act.demon.health.saturating_sub(50);
+                            if let Some(n) = act.demon.health.checked_sub(50) {
+                                act.demon.health = n;
+                            } else {
+                                if let Some(p) = act.players.get_mut(id) {
+                                    p.score += 1;
+                                }
+                            }
                         }
                     } else {
                         for p in act.players.values_mut() {
@@ -290,6 +298,7 @@ impl GameServer {
                                 name: p.name.to_string(),
                                 angle: p.angle,
                                 health: p.health,
+                                score: p.score,
                                 shielding: p.shielding,
                                 shooting: p.shooting,
                             },
@@ -388,7 +397,7 @@ impl Handler<ServerMessage> for GameServer {
                     p.shielding = false;
                 }
                 ClientMessage::Shield(s) => {
-                    if p.last_shield.elapsed().as_millis() > 300 {
+                    if p.last_shield.elapsed().as_millis() > 100 {
                         p.shielding = s
                     }
                 }
@@ -402,6 +411,7 @@ impl Handler<ServerMessage> for GameServer {
                     pos: Vector2::new(PLAYX / 2.0, PLAYY / 2.0),
                     anchor: Vector2::new(PLAYX / 2.0, PLAYY / 2.0 - 250.0),
                     name,
+                    score: 0,
                     angle: 0.0,
                     health: 255,
                     shielding: false,

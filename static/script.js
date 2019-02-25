@@ -4,7 +4,7 @@ let width = (canvas.width = window.innerWidth);
 let height = (canvas.height = window.innerHeight);
 
 const playx = 4000;
-const playy = 500;
+const playy = 750;
 
 let you = "";
 
